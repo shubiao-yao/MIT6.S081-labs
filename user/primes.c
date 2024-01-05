@@ -1,9 +1,3 @@
-/*
-Write a concurrent version of prime sieve using pipes. This idea is due to Doug McIlroy, inventor of Unix pipes. 
-The picture halfway down this page and the surrounding text explain how to do it. 
-Your solution should be in the file user/primes.c.
-*/
-
 #include "kernel/types.h"
 #include "user/user.h"
 
@@ -62,7 +56,7 @@ int prime(int *p) {
         close(p_next[1]);
         exit(1);
     }
-    
+
     if (pid > 0) {
         close(p_next[0]);
         while (read(p[0], &num, sizeof(num))) {

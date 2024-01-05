@@ -21,11 +21,11 @@ int main(int argc, char *argv[]) {
     int i = 0;
     int index = argc - 1;
     int line_end = 0;
-    while (read(0, &buf[i], sizeof(char))) { //example: echo world | xargs echo hello  
+    while (read(0, &buf[i], sizeof(char))) { //example: echo world | xargs echo hello
         if (buf[i] == '\n')
             line_end = 1;
         if (buf[i] == ' ' || buf[i] == '\n') {
-            buf[i] = 0;          
+            buf[i] = 0;
             x_args[index] = buf;
             index++;
             i = 0;
