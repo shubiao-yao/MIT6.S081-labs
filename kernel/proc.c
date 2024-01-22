@@ -274,6 +274,8 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  //copy the trace mask from the parent to the child process.
+  np->mask = p->mask;
 
   np->parent = p;
 
@@ -692,4 +694,20 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+//collect the number of processes whose state is not UNUSED
+int nproc(void)
+{
+  int n = 0;
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state != UNUSED)
+        n++;
+    release(&p->lock);
+  }
+  return n;
 }
