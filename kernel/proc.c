@@ -121,6 +121,15 @@ found:
     return 0;
   }
 
+  // ======= solution for pgtbl ---- part 2 ========
+  p->kpagetable = kvmcreate();
+  if(p->pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  // ===============================================
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -142,6 +151,11 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  //==== solution for pgtbl ---- part 2 ========
+  if(p->kpagetable) 
+    kvmfree(p->kpagetable, p->sz);
+  p->kpagetable = 0;
+  // ===========================================
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -168,15 +182,13 @@ proc_pagetable(struct proc *p)
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
   // to/from user space, so not PTE_U.
-  if(mappages(pagetable, TRAMPOLINE, PGSIZE,
-              (uint64)trampoline, PTE_R | PTE_X) < 0){
+  if(mappages(pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) < 0){
     uvmfree(pagetable, 0);
     return 0;
   }
 
   // map the trapframe just below TRAMPOLINE, for trampoline.S.
-  if(mappages(pagetable, TRAPFRAME, PGSIZE,
-              (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
+  if(mappages(pagetable, TRAPFRAME, PGSIZE, (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
     uvmfree(pagetable, 0);
     return 0;
@@ -229,6 +241,10 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+
+  // =========== solution for pgtbl ---- part 3 =============
+  kvmmapuser(p->pid, p->kpagetable, p->pagetable, p->sz, 0);
+  // ========================================================
 
   release(&p->lock);
 }
@@ -473,12 +489,20 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        // ====== solution for pgtbl ---- part 2 ========
+        // switch kernel page table
+        w_satp(MAKE_SATP(p->kpagetable));
+        sfence_vma();
+        // ==============================================
         swtch(&c->context, &p->context);
-
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
 
+        // ======= solution for pgtbl ---- part 2 ========
+        // switch to scheduler's kernel page table
+        kvminithart();
+        // ===============================================
         found = 1;
       }
       release(&p->lock);
